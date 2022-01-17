@@ -66,34 +66,43 @@ const erc = new ethers.Contract(
 );
 
 const run = async () => {
-    await checkLiq();
+    if (process.env.CHECK_LIQUIDITY === "1" || process.env.CHECK_LIQUIDITY === 1) {
+      // 需要检测流动性
+      await checkLiq();
+    } else {
+      console.log(chalk.red("跳过流动性检测"))
+      setTimeout(() => buyAction(), 1);
+    }
 }
 
   let checkLiq = async() => {
-    // const pairAddressx = await factory.getPair(tokenIn, tokenOut);
-    // console.log(chalk.blue(`流动性检测成功，交易对: ${pairAddressx}`));
-    // if (pairAddressx !== null && pairAddressx !== undefined) {
-    //   // console.log("pairAddress.toString().indexOf('0x0000000000000')", pairAddress.toString().indexOf('0x0000000000000'));
-    //   if (pairAddressx.toString().indexOf('0x0000000000000') > -1) {
-    //     console.log(chalk.blue(`流动性：${pairAddressx}未检测成功，自动重启中`));
-    //     return await run();
-    //   }
-    // }
-    // const pairBNBvalue = await erc.balanceOf(pairAddressx);
-    // jmlBnb = await ethers.utils.formatEther(pairBNBvalue);
-    // console.log(`流动性: ${jmlBnb} BNB`);
-    //
-    // if(parseFloat(jmlBnb) > parseFloat(data.minBnb)){
-    //     setTimeout(() => buyAction(), 1);
-    // }
-    // else{
-    //     initialLiquidityDetected = false;
-    //     console.log(' run again...');
-    //     return await run();
-    //   }
+    const pairAddressx = await factory.getPair(tokenIn, tokenOut);
+    console.log(chalk.blue(`流动性交易对检测成功: ${pairAddressx}`));
+    if (pairAddressx !== null && pairAddressx !== undefined) {
+      // console.log("pairAddress.toString().indexOf('0x0000000000000')", pairAddress.toString().indexOf('0x0000000000000'));
+      if (pairAddressx.toString().indexOf('0x0000000000000') > -1) {
+        console.log(chalk.blue(`流动性：${pairAddressx}未检测成功，自动重启中`));
+        return await run();
+      }
+    }
+    const pairBNBvalue = await erc.balanceOf(pairAddressx);
+    jmlBnb = await ethers.utils.formatEther(pairBNBvalue);
+    if (parseInt(jmlBnb) === 0) {
+      console.log(chalk.red(`流动性未添加`));
+    } else {
+      console.log(`流动性: ${jmlBnb} BNB`);
+    }
 
-    console.log(chalk.red("跳过流动性检测"))
-    setTimeout(() => buyAction(), 1);
+
+    if(parseFloat(jmlBnb) > parseFloat(data.minBnb)){
+        buyAction()
+    }
+    else{
+        initialLiquidityDetected = false;
+        console.log('轮询检测中');
+        return await run();
+      }
+
   }
 
   let buyAction = async() => {
